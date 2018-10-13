@@ -32,7 +32,7 @@ class Stock:
         retstr='Date\t\t\t%s Price\n'%self.ticker
         retstr+=('_'*30)+"\n"
         for price,date in zip(self.prices,self.dates):
-            retstr+='%s\t$%0.2f\n'%(date.strftime('%Y-%m-%d %H:%M:%S'),price)
+            retstr+='%s\t$%0.2f\n'%(date.strftime('%Y-%m-%d %H:%M:%S'),price) 
         return retstr
     def get_formatted_dates(self,format='%Y-%m-%d %H:%M:%S'):
         dates=[]
