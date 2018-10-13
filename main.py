@@ -2,6 +2,8 @@ from os import system,remove
 from paramiko import SSHClient
 from scp import SCPClient
 from datetime import datetime
+import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
 
 def fetch_remote_data(ticker='AAPL'): # loads in all historical data for provided ticker
     print("Loading price data for %s..."%ticker)
@@ -24,14 +26,19 @@ class Stock:
         self.prices=[]
         self.dates=[]
     def append(self,price,date):
-        self.prices.append(price)
+        self.prices.append(float(price))
         self.dates.append(datetime.utcfromtimestamp(int(date)))
     def __repr__(self):
         retstr='Date\t\t\t%s Price\n'%self.ticker
         retstr+=('_'*30)+"\n"
         for price,date in zip(self.prices,self.dates):
-            retstr+='%s\t$%s\n'%(date.strftime('%Y-%m-%d %H:%M:%S'),price)
+            retstr+='%s\t$%0.2f\n'%(date.strftime('%Y-%m-%d %H:%M:%S'),price)
         return retstr
+    def get_formatted_dates(self,format='%Y-%m-%d %H:%M:%S'):
+        dates=[]
+        for date in self.dates:
+            dates.append(date.strftime(format))
+        return dates
 
 def parse_data(fname):
     stock=Stock(fname.split("/")[-1].split(".")[0])
@@ -41,9 +48,20 @@ def parse_data(fname):
             items=line.split("\t")
             if len(items)==2 and items[0]!='Datetime':
                 stock.append(items[1].strip(),items[0])
-    print(stock)
     return stock
 
-parse_data('AAPL.tsv')
+def plot_price(stock):
+    fig, ax = plt.subplots(1)
+    fig.autofmt_xdate()
+    xfmt = mdates.DateFormatter('%d-%m-%y %H:%M:%S')
+    ax.xaxis.set_major_formatter(xfmt)
+    plt.plot(stock.dates,stock.prices)
+    plt.ylabel('%s Price ($)'%stock.ticker)
+    plt.show()
+
+
+
+stock=parse_data('AAPL.tsv')
+plot_price(stock)
 
 
