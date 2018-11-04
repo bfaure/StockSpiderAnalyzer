@@ -1,7 +1,7 @@
 from os import system,remove
 from paramiko import SSHClient
 from scp import SCPClient
-from datetime import datetime
+from datetime import datetime,timedelta
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 from time import time
@@ -26,12 +26,11 @@ class Stock:
     def __init__(self,ticker,name=None):
         self.name=name 
         self.ticker=ticker
-        self.prices=[]
-        self.dates=[]
+        self.prices,self.dates=[],[]
         self.SMA={}
     def append(self,price,date):
         self.prices.append(float(price))
-        self.dates.append(datetime.utcfromtimestamp(int(date)))
+        self.dates.append(datetime.utcfromtimestamp(int(date))-timedelta(hours=5,minutes=0))
     def __repr__(self):
         retstr='Date\t\t\t%s Price\n'%self.ticker
         retstr+=('_'*30)+"\n"
@@ -43,6 +42,13 @@ class Stock:
         for date in self.dates:
             dates.append(date.strftime(format))
         return dates
+    def strip_off_hours(self): # remove all data not within extended trading hours (8AM-6PM)
+        new_prices,new_dates=[],[]
+        for price,date in zip(self.prices,self.dates):
+            if date.weekday()<5 and date.hour>=7 and date.hour<=18:
+                new_dates.append(date)
+                new_prices.append(price)
+        self.prices,self.dates=new_prices,new_dates
     
 def parse_data(fname):
     stock=Stock(fname.split("/")[-1].split(".")[0])
@@ -52,14 +58,16 @@ def parse_data(fname):
             items=line.split("\t")
             if len(items)==2 and items[0]!='Datetime':
                 stock.append(items[1].strip(),items[0])
+    stock.strip_off_hours()
     return stock
 
 def plot_price(stock):
     fig, ax = plt.subplots(1)
-    fig.autofmt_xdate()
-    xfmt = mdates.DateFormatter('%d-%m-%y %H:%M:%S')
-    ax.xaxis.set_major_formatter(xfmt)
-    plt.plot(stock.dates,stock.prices)
+    # fig.autofmt_xdate()
+    # xfmt = mdates.DateFormatter('%d-%m-%y %H:%M:%S')
+    # ax.xaxis.set_major_formatter(xfmt)
+    #plt.plot(stock.dates,stock.prices)
+    plt.plot(stock.prices)
     plt.ylabel('%s Price ($)'%stock.ticker)
     plt.show()
 
@@ -91,8 +99,8 @@ def SMA(stock,n_days=5):
 
 #fetch_remote_data()
 stock=parse_data('AAPL.tsv')
-#plot_price(stock)
-stock=SMA(stock,10)
-plot_SMA(stock)
+plot_price(stock)
+# stock=SMA(stock,10)
+# plot_SMA(stock)
 
 
