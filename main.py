@@ -4,6 +4,7 @@ from scp import SCPClient
 from datetime import datetime
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
+from time import time
 
 def fetch_remote_data(ticker='AAPL'): # loads in all historical data for provided ticker
     print("Loading price data for %s..."%ticker)
@@ -16,7 +17,9 @@ def fetch_remote_data(ticker='AAPL'): # loads in all historical data for provide
     ssh.load_system_host_keys()
     ssh.connect(server_ip,port=22,username=server_user,password=server_password)
     scp = SCPClient(ssh.get_transport())
+    t0=time()
     scp.get('%s/data/%s.tsv'%(server_path,ticker),'%s.tsv'%ticker)
+    print("Took %d seconds to fetch %s.tsv"%(time()-t0,ticker))
     return '%s.tsv'%ticker
 
 class Stock:
@@ -25,6 +28,7 @@ class Stock:
         self.ticker=ticker
         self.prices=[]
         self.dates=[]
+        self.SMA={}
     def append(self,price,date):
         self.prices.append(float(price))
         self.dates.append(datetime.utcfromtimestamp(int(date)))
@@ -39,7 +43,7 @@ class Stock:
         for date in self.dates:
             dates.append(date.strftime(format))
         return dates
-
+    
 def parse_data(fname):
     stock=Stock(fname.split("/")[-1].split(".")[0])
     with open(fname,'r') as f:
@@ -59,9 +63,36 @@ def plot_price(stock):
     plt.ylabel('%s Price ($)'%stock.ticker)
     plt.show()
 
+def plot_SMA(stock):
+    fig, ax = plt.subplots(nrows=2,ncols=1)
+    fig.autofmt_xdate()
+    xfmt = mdates.DateFormatter('%d-%m-%y %H:%M:%S')
+    for i,row in enumerate(ax):
+        if i==0:
+            row.xaxis.set_major_formatter(xfmt)
+            row.plot(stock.dates,stock.prices)
+            plt.ylabel('%s Price ($)'%stock.ticker)
+        if i==1:
+            row.plot(stock.dates,stock.SMA[10])
+    plt.show()
 
+def SMA(stock,n_days=5):
+    moving_average=[]
+    buffer=[]
+    for price in stock.prices:
+        buffer.append(price)
+        if len(buffer)==n_days:
+            moving_average.append(sum(buffer))
+            buffer=buffer[1:]
+        else:
+            moving_average.append(None)
+    stock.SMA[n_days]=moving_average
+    return stock
 
+#fetch_remote_data()
 stock=parse_data('AAPL.tsv')
-plot_price(stock)
+#plot_price(stock)
+stock=SMA(stock,10)
+plot_SMA(stock)
 
 
